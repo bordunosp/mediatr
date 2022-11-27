@@ -22,112 +22,136 @@ go get -u github.com/bordunosp/mediatr
 
 ## Getting Started
 
-### Simple Command Example
-
-> First we need to implement the command interface
+First we need to implement one of 3 possible interfaces
 
 ```go
 // github.com/bordunosp/mediatr/Application/Command/ICommand
-
 type ICommand interface {
     Execute(ctx context.Context) error
 }
+
+// github.com/bordunosp/mediatr/Application/Query/IQuery
+type IQuery interface {
+    Handle(ctx context.Context) (any, error)
+}
+
+// github.com/bordunosp/mediatr/Application/Event/IEvent
+type IEvent interface {
+    Dispatch(ctx context.Context) error
+}
 ```
-this will be our first Command
+
+---
+
+#### Command Example
 
 ```go
-import "context"
+import (
+    "context"
+    "github.com/google/uuid"
+)
 
-type UserAdd struct {
+type UserAddCommand struct {
+    Id    uuid.UUID
     Name  string
     Email string
 }
 
-func (command *UserAdd) Execute(ctx context.Context) error {
+func (command *UserAddCommand) Execute(ctx context.Context) error {
     // save user to database
     return nil
 }
 ```
 
-And after that we can use it with CommandBus
-in one of 3 ways convenient for us
+---
 
+#### Query Example
+
+```go
+import "github.com/google/uuid"
+
+type UserDTO struct {
+    Id    uuid.UUID
+    Name  string
+    Email string
+}
+```
+
+```go
+import "context"
+
+type UserByEmailQuery struct {
+    Email string
+}
+
+func (query *UserByEmailQuery) Handle(ctx context.Context) (any, error) {
+    var user UserDTO
+    // get user from database by email 'query.Email'
+    return user, nil
+}
+```
+
+---
+
+#### Event Example
+
+```go
+import (
+    "context"
+    "github.com/google/uuid"
+)
+
+type UserWasCreatedEvent struct {
+    Id uuid.UUID
+}
+
+func (event *UserWasCreatedEvent) Dispatch(ctx context.Context) error {
+    // do stuff
+    // it could be save log or send letter or something else 
+    return nil
+}
+```
+
+---
+
+### Simple CommandBus Example
 
 ```go
 package main
 
 import (
+    "context"
     "github.com/bordunosp/mediatr"
+    "github.com/google/uuid"
 )
 
 func main() {
     cnt := context.Background()
 
-    command := &UserAdd{
+    command := &UserAddCommand{
+        Id:    uuid.New(),
         Name:  "User Name",
         Email: "user@email.com",
     }
 
     // 1st - standard way, just do job
-    err := mediatr.CommandBus.Execute(cnt, command)
-    if err != nil {
-        panic(err)
-    }
+    _ = mediatr.CommandBus.Execute(cnt, command)
 
     // 2nd - run job in coroutine, the chan with error will be returned 
-    err = <-mediatr.CommandBus.ExecuteAsync(cnt, command)
-    if err != nil {
-        panic(err)
-    }
+    _ = <-mediatr.CommandBus.ExecuteAsync(cnt, command)
 
     // 3rd - run and await job in coroutine
-    err = mediatr.CommandBus.ExecuteAsyncAwait(cnt, command)
-    if err != nil {
-        panic(err)
-    }
+    _ = mediatr.CommandBus.ExecuteAsyncAwait(cnt, command)
 }
 ```
 
-
-
-
-
-### Simple Query Example
-
-> First we need to implement the query interface
-
-```go
-// github.com/bordunosp/mediatr/Application/Query/IQuery
-
-type IQuery interface {
-    Handle(ctx context.Context) (any, error)
-}
-```
-this will be our first Query
-
-```go
-import "context"
-
-type UserByEmail struct {
-    Email string
-}
-
-func (query *UserByEmail) Handle(ctx context.Context) (any, error) {
-    // get user from database by email 'query.Email'
-    var user UserDTO
-	
-    return user, nil
-}
-```
-
-And after that we can use it with QueryBus
-in one of 3 ways convenient for us
-
+### Simple QueryBus Example
 
 ```go
 package main
 
 import (
+    "context"
     "github.com/bordunosp/mediatr"
     "log"
 )
@@ -135,7 +159,7 @@ import (
 func main() {
     cnt := context.Background()
 
-    query := &UserByEmail{
+    query := &UserByEmailQuery{
         Email: "user@email.com",
     }
 
@@ -163,44 +187,13 @@ func main() {
 }
 ```
 
-
-
-
-### Simple Event Example
-
-> First we need to implement the event interface
-
-```go
-// github.com/bordunosp/mediatr/Application/Event/IEvent
-
-type IEvent interface {
-    Dispatch(ctx context.Context) error
-}
-```
-this will be our first Event
-
-```go
-import "context"
-
-type UserWasCreated struct {
-    Email string
-}
-
-func (event *UserWasCreated) Dispatch(ctx context.Context) error {
-    // do stuff
-    // it could be save log or send letter or something else 
-    return nil
-}
-```
-
-And after that we can use it with EventBus
-in one of 3 ways convenient for us
-
+### Simple EventBus Example
 
 ```go
 package main
 
 import (
+    "context"
     "github.com/bordunosp/mediatr"
     "log"
 )
@@ -208,27 +201,20 @@ import (
 func main() {
     cnt := context.Background()
 
-    query := &UserWasCreated{
-        Email: "user@email.com",
+    userId := uuid.New()
+
+    query := &UserWasCreatedEvent{
+        Id: userId,
     }
 
     // 1st - standard way, just do job
-    err := mediatr.EventBus.Dispatch(cnt, event)
-    if err != nil {
-        panic(err)
-    }
+    _ = mediatr.EventBus.Dispatch(cnt, event)
 
     // 2nd - run job in coroutine, the chan with error will be returned 
-    err = <-mediatr.EventBus.DispatchAsync(cnt, event)
-    if err != nil {
-        panic(err)
-    }
+    _ = <-mediatr.EventBus.DispatchAsync(cnt, event)
 
     // 3rd - run and await job in coroutine
-    err = mediatr.EventBus.DispatchAsyncAwait(cnt, event)
-    if err != nil {
-        panic(err)
-    }
+    _ = mediatr.EventBus.DispatchAsyncAwait(cnt, event)
 }
 ```
 
