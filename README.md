@@ -126,7 +126,7 @@ import (
 )
 
 func main() {
-    cnt := context.Background()
+	ctx := context.Background()
 
     command := &UserAddCommand{
         Id:    uuid.New(),
@@ -135,13 +135,13 @@ func main() {
     }
 
     // 1st - standard way, just do job
-    _ = mediatr.CommandBus.Execute(cnt, command)
+    _ = mediatr.CommandBus.Execute(ctx, command)
 
     // 2nd - run job in coroutine, the chan with error will be returned 
-    _ = <-mediatr.CommandBus.ExecuteAsync(cnt, command)
+    _ = <-mediatr.CommandBus.ExecuteAsync(ctx, command)
 
     // 3rd - run and await job in coroutine
-    _ = mediatr.CommandBus.ExecuteAsyncAwait(cnt, command)
+    _ = mediatr.CommandBus.ExecuteAsyncAwait(ctx, command)
 }
 ```
 
@@ -157,14 +157,14 @@ import (
 )
 
 func main() {
-    cnt := context.Background()
+	ctx := context.Background()
 
     query := &UserByEmailQuery{
         Email: "user@email.com",
     }
 
     // 1st - standard way, just do job
-    user, err := mediatr.QueryBus.Handle(cnt, query)
+    user, err := mediatr.QueryBus.Handle(ctx, query)
     if err != nil {
         panic(err)
     }
@@ -172,14 +172,14 @@ func main() {
 
     // 2nd - run job in coroutine, 
     // the chan with Query.ReplayDTO will be returned 
-    replayDTO := <-mediatr.QueryBus.HandleAsync(cnt, query)
+    replayDTO := <-mediatr.QueryBus.HandleAsync(ctx, query)
     if replayDTO.Err != nil {
         panic(replayDTO.Err)
     }
     log.Println(replayDTO.Value.(UserDTO))
 
     // 3rd - run and await job in coroutine
-    user, err = mediatr.QueryBus.HandleAsyncAwait(cnt, query)
+    user, err = mediatr.QueryBus.HandleAsyncAwait(ctx, query)
     if err != nil {
         panic(err)
     }
@@ -199,7 +199,7 @@ import (
 )
 
 func main() {
-    cnt := context.Background()
+	ctx := context.Background()
 
     userId := uuid.New()
 
@@ -208,13 +208,13 @@ func main() {
     }
 
     // 1st - standard way, just do job
-    _ = mediatr.EventBus.Dispatch(cnt, event)
+    _ = mediatr.EventBus.Dispatch(ctx, event)
 
     // 2nd - run job in coroutine, the chan with error will be returned 
-    _ = <-mediatr.EventBus.DispatchAsync(cnt, event)
+    _ = <-mediatr.EventBus.DispatchAsync(ctx, event)
 
     // 3rd - run and await job in coroutine
-    _ = mediatr.EventBus.DispatchAsyncAwait(cnt, event)
+    _ = mediatr.EventBus.DispatchAsyncAwait(ctx, event)
 }
 ```
 
